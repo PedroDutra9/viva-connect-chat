@@ -12,6 +12,7 @@ import {
   Sparkles,
   MessageSquare,
   Image,
+  MessageSquarePlus,
   FileText,
   Clock,
   Filter,
@@ -170,14 +171,24 @@ const ConversasPage = () => {
               <h2 className="text-base font-semibold text-foreground">
                 Atendimentos
               </h2>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
-                    <Filter className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Filtros avançados</TooltipContent>
-              </Tooltip>
+              <div className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="p-1.5 rounded-lg hover:bg-primary/10 text-primary">
+                      <MessageSquarePlus className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Nova conversa</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
+                      <Filter className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Filtros avançados</TooltipContent>
+                </Tooltip>
+              </div>
             </div>
 
             {/* Search */}
