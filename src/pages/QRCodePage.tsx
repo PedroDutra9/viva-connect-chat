@@ -47,7 +47,7 @@ const QRCodePage = () => {
           >
             <div className="flex items-center gap-2 mb-6">
               <Wifi className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-bold text-foreground">Viva Connection</h2>
+              <h2 className="text-lg font-bold text-foreground">LumiChat</h2>
             </div>
 
             <div className="bg-background p-4 rounded-xl border border-border">
@@ -62,7 +62,7 @@ const QRCodePage = () => {
             </div>
 
             <p className="mt-6 text-sm text-muted-foreground text-center max-w-[260px]">
-              📱 Aponte a câmera e fale com a <span className="font-semibold text-foreground">Viva Connection</span>
+              📱 Aponte a câmera e fale com a <span className="font-semibold text-foreground">LumiChat</span>
             </p>
 
             <button
@@ -106,7 +106,7 @@ const QRCodePage = () => {
             <div className="mt-6 p-4 rounded-lg bg-muted/50 border border-border/50">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Mensagem Inicial</p>
               <p className="text-sm text-foreground">
-                👋 Olá! Seja bem-vindo à Viva Connection 💙<br />
+                👋 Olá! Seja bem-vindo à LumiChat 💙<br />
                 Pra te atender melhor, me diga o que você precisa:<br /><br />
                 1 - Quero contratar internet<br />
                 2 - Já sou cliente<br />
