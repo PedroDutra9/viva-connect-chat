@@ -96,7 +96,7 @@ const AppSidebar = () => {
           <Wifi className="h-5 w-5 text-sidebar-primary-foreground" />
         </div>
         <div>
-          <h1 className="text-sm font-bold text-sidebar-foreground">Viva Connection</h1>
+          <h1 className="text-sm font-bold text-sidebar-foreground">LumiChat</h1>
           <p className="text-[10px] text-sidebar-muted">Plataforma Omnichannel</p>
         </div>
       </div>

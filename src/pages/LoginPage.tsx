@@ -48,7 +48,7 @@ const LoginPage = () => {
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary mb-4">
               <Wifi className="h-7 w-7 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Viva Connection</h1>
+            <h1 className="text-2xl font-bold text-foreground">LumiChat</h1>
             <p className="text-sm text-muted-foreground mt-1">Plataforma Omnichannel de Atendimento</p>
           </div>
 
@@ -115,7 +115,7 @@ const LoginPage = () => {
           </form>
 
           <p className="text-center text-[11px] text-muted-foreground mt-6">
-            © 2026 Viva Connection · Todos os direitos reservados
+            © 2026 LumiChat · Todos os direitos reservados
           </p>
         </div>
       </motion.div>
