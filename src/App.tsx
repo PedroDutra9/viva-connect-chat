@@ -7,6 +7,7 @@ import LoginPage from "./pages/LoginPage";
 import Index from "./pages/Index";
 import FilasPage from "./pages/FilasPage";
 import ConversasPage from "./pages/ConversasPage";
+import ChannelsPage from "./pages/ChannelsPage";
 import QRCodePage from "./pages/QRCodePage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import NotFound from "./pages/NotFound";
@@ -36,7 +37,7 @@ const App = () => (
           {/* Placeholder pages */}
           <Route path="/historico" element={<RequireAuth><PlaceholderPage title="Histórico de Atendimentos" description="Consulte todos os atendimentos finalizados com filtros avançados." /></RequireAuth>} />
           <Route path="/contatos" element={<RequireAuth><PlaceholderPage title="Contatos" description="Gerencie sua base de clientes com dados personalizados e histórico de interações." /></RequireAuth>} />
-          <Route path="/canais" element={<RequireAuth><PlaceholderPage title="Canais" description="Configure WhatsApp, Instagram, Telegram, Webchat e E-mail." /></RequireAuth>} />
+          <Route path="/canais" element={<RequireAuth><ChannelsPage /></RequireAuth>} />
           <Route path="/grupos" element={<RequireAuth><PlaceholderPage title="Grupos" description="Agrupe canais com regras de roteamento e direcionamento por setor." /></RequireAuth>} />
           <Route path="/fluxos" element={<RequireAuth><PlaceholderPage title="Fluxos de Automação" description="Crie fluxos automatizados, bots de triagem e URA de atendimento." /></RequireAuth>} />
           <Route path="/agentes-ia" element={<RequireAuth><PlaceholderPage title="Agentes IA" description="Configure bots inteligentes com personalidade e funções específicas." /></RequireAuth>} />

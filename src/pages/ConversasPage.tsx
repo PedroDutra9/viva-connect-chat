@@ -16,6 +16,7 @@ import {
   FileText,
   Clock,
   Filter,
+  Edit2,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import QueueBadge from "@/components/QueueBadge";
@@ -97,7 +98,43 @@ const ConversasPage = () => {
   const [activeFilter, setActiveFilter] = useState<FilterTab>("todos");
   const [messageText, setMessageText] = useState("");
   const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [editingSubject, setEditingSubject] = useState(false);
+  const [editedSubject, setEditedSubject] = useState("");
+  const [editedConversations, setEditedConversations] = useState<Record<string, Conversation>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  // Função para obter o assunto atual (considerando edições)
+  const getCurrentSubject = (conv: Conversation) => {
+    return editedConversations[conv.id]?.subject || conv.subject;
+  };
+
+  // Função para iniciar edição
+  const startEditing = (subject: string) => {
+    setEditingSubject(true);
+    setEditedSubject(subject);
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  };
+
+  // Função para salvar edição
+  const saveSubjectEdit = () => {
+    if (selected && editedSubject.trim()) {
+      const updatedConv = { ...selected, subject: editedSubject.trim() };
+      setSelected(updatedConv);
+      setEditedConversations((prev) => ({
+        ...prev,
+        [selected.id]: updatedConv,
+      }));
+    }
+    setEditingSubject(false);
+    setEditedSubject("");
+  };
+
+  // Função para cancelar edição
+  const cancelEditing = () => {
+    setEditingSubject(false);
+    setEditedSubject("");
+  };
 
   const counts = getFilterCounts();
 
@@ -304,9 +341,40 @@ const ConversasPage = () => {
                     <QueueBadge queue={selected.queue} />
                     <StatusBadge status={selected.status} />
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {selected.customer.phone} · {selected.subject}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {selected.customer.phone} ·
+                    </p>
+                    {editingSubject ? (
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        <input
+                          ref={editInputRef}
+                          type="text"
+                          value={editedSubject}
+                          onChange={(e) => setEditedSubject(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              saveSubjectEdit();
+                            } else if (e.key === "Escape") {
+                              cancelEditing();
+                            }
+                          }}
+                          onBlur={saveSubjectEdit}
+                          className="flex-1 text-xs bg-primary/10 border border-primary rounded px-2 py-1 text-foreground"
+                          placeholder="Nome do atendimento..."
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEditing(getCurrentSubject(selected))}
+                        className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 group"
+                        title="Clique para editar o nome do atendimento"
+                      >
+                        <span className="truncate">{getCurrentSubject(selected)}</span>
+                        <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {selected.assignedTo && (
