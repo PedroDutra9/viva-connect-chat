@@ -10,6 +10,7 @@ import ConversasPage from "./pages/ConversasPage";
 import ChannelsPage from "./pages/ChannelsPage";
 import QRCodePage from "./pages/QRCodePage";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import FluxosPage from "./pages/FluxosPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,7 +40,7 @@ const App = () => (
           <Route path="/contatos" element={<RequireAuth><PlaceholderPage title="Contatos" description="Gerencie sua base de clientes com dados personalizados e histórico de interações." /></RequireAuth>} />
           <Route path="/canais" element={<RequireAuth><ChannelsPage /></RequireAuth>} />
           <Route path="/grupos" element={<RequireAuth><PlaceholderPage title="Grupos" description="Agrupe canais com regras de roteamento e direcionamento por setor." /></RequireAuth>} />
-          <Route path="/fluxos" element={<RequireAuth><PlaceholderPage title="Fluxos de Automação" description="Crie fluxos automatizados, bots de triagem e URA de atendimento." /></RequireAuth>} />
+          <Route path="/fluxos" element={<RequireAuth><FluxosPage /></RequireAuth>} />
           <Route path="/agentes-ia" element={<RequireAuth><PlaceholderPage title="Agentes IA" description="Configure bots inteligentes com personalidade e funções específicas." /></RequireAuth>} />
           <Route path="/ferramentas-ia" element={<RequireAuth><PlaceholderPage title="Ferramentas de IA" description="Classificação automática, análise de sentimento e sugestão de respostas." /></RequireAuth>} />
           <Route path="/base-conhecimento" element={<RequireAuth><PlaceholderPage title="Base de Conhecimento" description="Artigos, FAQs e documentação para treinamento da IA." /></RequireAuth>} />
