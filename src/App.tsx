@@ -11,6 +11,10 @@ import ChannelsPage from "./pages/ChannelsPage";
 import QRCodePage from "./pages/QRCodePage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import FluxosPage from "./pages/FluxosPage";
+import ContatosPage from "./pages/ContatosPage";
+import EquipePage from "./pages/EquipePage";
+import SetoresPage from "./pages/SetoresPage";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,7 +41,7 @@ const App = () => (
 
           {/* Placeholder pages */}
           <Route path="/historico" element={<RequireAuth><PlaceholderPage title="Histórico de Atendimentos" description="Consulte todos os atendimentos finalizados com filtros avançados." /></RequireAuth>} />
-          <Route path="/contatos" element={<RequireAuth><PlaceholderPage title="Contatos" description="Gerencie sua base de clientes com dados personalizados e histórico de interações." /></RequireAuth>} />
+          <Route path="/contatos" element={<RequireAuth><ContatosPage /></RequireAuth>} />
           <Route path="/canais" element={<RequireAuth><ChannelsPage /></RequireAuth>} />
           <Route path="/grupos" element={<RequireAuth><PlaceholderPage title="Grupos" description="Agrupe canais com regras de roteamento e direcionamento por setor." /></RequireAuth>} />
           <Route path="/fluxos" element={<RequireAuth><FluxosPage /></RequireAuth>} />
@@ -45,8 +49,8 @@ const App = () => (
           <Route path="/ferramentas-ia" element={<RequireAuth><PlaceholderPage title="Ferramentas de IA" description="Classificação automática, análise de sentimento e sugestão de respostas." /></RequireAuth>} />
           <Route path="/base-conhecimento" element={<RequireAuth><PlaceholderPage title="Base de Conhecimento" description="Artigos, FAQs e documentação para treinamento da IA." /></RequireAuth>} />
           <Route path="/integracoes" element={<RequireAuth><PlaceholderPage title="Integrações" description="Conecte APIs, CRM, ERP, gateways de pagamento e webhooks." /></RequireAuth>} />
-          <Route path="/equipe" element={<RequireAuth><PlaceholderPage title="Equipe" description="Cadastre usuários, defina permissões e gerencie status online/offline." /></RequireAuth>} />
-          <Route path="/setores" element={<RequireAuth><PlaceholderPage title="Setores" description="Gerencie setores como Comercial, Suporte e Financeiro." /></RequireAuth>} />
+          <Route path="/equipe" element={<RequireAuth><EquipePage /></RequireAuth>} />
+          <Route path="/setores" element={<RequireAuth><SetoresPage /></RequireAuth>} />
           <Route path="/configuracoes" element={<RequireAuth><PlaceholderPage title="Configurações" description="Dados da empresa, idioma, aparência e regras gerais." /></RequireAuth>} />
           <Route path="/auditoria" element={<RequireAuth><PlaceholderPage title="Auditoria" description="Logs do sistema e rastreamento de ações dos usuários." /></RequireAuth>} />
           <Route path="/documentacao" element={<RequireAuth><PlaceholderPage title="Documentação" description="Guias de uso, tutoriais e documentação da API." /></RequireAuth>} />
