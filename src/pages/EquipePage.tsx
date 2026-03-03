@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2, X, Check, Search, UserPlus, Shield, Users } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/lib/supabase";
+
 
 // ---- Types ----
 type Funcao = "Administrador" | "Supervisor" | "Agente";
 type StatusUsuario = "Ativo" | "Inativo";
 
 interface Usuario {
-  id: number;
+  id: string;
+  auth_id: string; 
   nome: string;
   email: string;
   senha?: string;
@@ -71,6 +73,8 @@ const Avatar = ({ nome, size = 36 }: { nome: string; size?: number }) => {
   );
 };
 
+
+
 // ---- Badge função ----
 const FuncaoBadge = ({ funcao }: { funcao: Funcao }) => {
   const def = getFuncaoDef(funcao);
@@ -83,6 +87,7 @@ const FuncaoBadge = ({ funcao }: { funcao: Funcao }) => {
     </span>
   );
 };
+
 
 // ---- Modal criar / editar ----
 const ModalUsuario = ({
@@ -222,14 +227,31 @@ const ModalUsuario = ({
 
 // ---- Page ----
 const EquipePage = () => {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([
-    { id: 1, nome: "Pedro", email: "pedro@msviva.com.br", funcao: "Administrador", filas: [], status: "Ativo" },
-  ]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [busca, setBusca] = useState("");
   const [modal, setModal] = useState<"novo" | Usuario | null>(null);
 
   const usuarioParaEditar = modal !== "novo" ? modal as Usuario | null : null;
 
+  useEffect(() => {
+    buscarUsuarios();
+  }, []);
+
+  const buscarUsuarios = async () => {
+  const { data, error } = await supabase
+    .from("usuarios")
+    .select("*");
+
+  if (error) {
+    console.error("Erro ao buscar usuários:", error.message);
+  } else {
+  const normalizados = (data || []).map(u => ({
+      ...u,
+      filas: u.filas ?? [],   // 👈 garante array
+    }));
+    setUsuarios(normalizados);
+  }
+};
   const criarOuEditar = async (dados: Omit<Usuario, "id" | "status"> & { senha?: string }) => {
   if (modal === "novo") {
     // 1. Criar no AUTH
@@ -251,6 +273,7 @@ const EquipePage = () => {
       nome: dados.nome,
       email: dados.email,
       funcao: dados.funcao,
+      filas: dados.filas,
       status: "Ativo",
     });
 
@@ -260,6 +283,7 @@ const EquipePage = () => {
     }
 
     alert("Usuário criado com sucesso!");
+    await buscarUsuarios();
   } else if (modal) {
     alert("Edição ainda não implementada no banco");
   }
@@ -267,12 +291,34 @@ const EquipePage = () => {
   setModal(null);
 };
 
-  const excluir = (id: number) => {
-    if (confirm("Deseja excluir este usuário?"))
-      setUsuarios(prev => prev.filter(u => u.id !== id));
-  };
+const excluir = async (authId: string) => {
+  const ok = confirm("Deseja realmente excluir este usuário?");
+  if (!ok) return;
 
-  const toggleStatus = (id: number) => {
+  console.log("Excluindo auth_id:", authId);
+
+  const { data, error } = await supabase
+    .from("usuarios")
+    .delete()
+    .eq("auth_id", authId)
+    .select(); // força retorno
+
+  if (error) {
+    console.error(error);
+    alert("Erro ao excluir: " + error.message);
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    alert("Nenhum registro foi apagado. auth_id não encontrado.");
+    return;
+  }
+
+  await buscarUsuarios();
+  alert("Usuário excluído do banco!");
+};
+
+  const toggleStatus = (id: string) => {
     setUsuarios(prev => prev.map(u => u.id === id ? { ...u, status: u.status === "Ativo" ? "Inativo" : "Ativo" } : u));
   };
 
@@ -343,7 +389,7 @@ const EquipePage = () => {
             </div>
           ) : (
             filtrados.map((u, i) => {
-              const filaNames = u.filas.map(fId => filasDisponiveis.find(f => f.id === fId)?.nome).filter(Boolean);
+             const filaNames = (u.filas ?? []).map(fId =>filasDisponiveis.find(f => f.id === fId)?.nome).filter(Boolean);
               return (
                 <div
                   key={u.id}
@@ -408,7 +454,7 @@ const EquipePage = () => {
                       <Pencil size={15} />
                     </button>
                     <button
-                      onClick={() => excluir(u.id)}
+                      onClick={() => excluir(u.auth_id)}
                       className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-colors"
                       title="Excluir"
                     >
