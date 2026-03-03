@@ -4,7 +4,7 @@
 
 // ---------- ENUMS ----------
 export type Funcao = 'Administrador' | 'Supervisor' | 'Agente';
-export type StatusUsuario = 'Ativo' | 'Inativo' | 'Online' | 'Offline' | 'Ausente';
+export type StatusUsuario = 'Ativo' | 'Inativo';
 export type StatusConversa = 'aguardando' | 'em_atendimento' | 'finalizada' | 'bot';
 export type TipoCanal = 'whatsapp' | 'instagram' | 'telegram' | 'email' | 'webchat';
 export type SenderType = 'contact' | 'agent' | 'bot' | 'system';
@@ -40,16 +40,13 @@ export interface Fila {
 }
 
 export interface Usuario {
-  id: string;
-  auth_id: string | null;
+  id: string;            // uuid do auth.users
   nome: string;
   email: string;
-  funcao: Funcao;
-  status: StatusUsuario;
+  funcao: Funcao;        // 'Administrador' | 'Supervisor' | 'Agente'
+  status: 'Ativo' | 'Inativo';
   avatar_url: string | null;
   created_at: string;
-  updated_at: string;
-  // Relacionamentos
   filas?: Fila[];
 }
 

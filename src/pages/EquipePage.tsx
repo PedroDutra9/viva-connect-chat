@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, X, Check, Search, UserPlus, Shield, Users } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { supabase } from "@/lib/supabase";
 
 // ---- Types ----
 type Funcao = "Administrador" | "Supervisor" | "Agente";
@@ -229,13 +230,42 @@ const EquipePage = () => {
 
   const usuarioParaEditar = modal !== "novo" ? modal as Usuario | null : null;
 
-  const criarOuEditar = (dados: Omit<Usuario, "id" | "status">) => {
-    if (modal === "novo") {
-      setUsuarios(prev => [...prev, { ...dados, id: Date.now(), status: "Ativo" }]);
-    } else if (modal) {
-      setUsuarios(prev => prev.map(u => u.id === (modal as Usuario).id ? { ...u, ...dados } : u));
+  const criarOuEditar = async (dados: Omit<Usuario, "id" | "status"> & { senha?: string }) => {
+  if (modal === "novo") {
+    // 1. Criar no AUTH
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: dados.email,
+      password: dados.senha!,
+    });
+
+    if (authError) {
+      alert("Erro ao criar login: " + authError.message);
+      return;
     }
-  };
+
+    const userId = authData.user!.id;
+
+    // 2. UPSERT na tabela usuarios (não duplica)
+    const { error: dbError } = await supabase.from("usuarios").upsert({
+      id: userId,           // PK = auth.users.id
+      nome: dados.nome,
+      email: dados.email,
+      funcao: dados.funcao,
+      status: "Ativo",
+    });
+
+    if (dbError) {
+      alert("Erro ao salvar no banco: " + dbError.message);
+      return;
+    }
+
+    alert("Usuário criado com sucesso!");
+  } else if (modal) {
+    alert("Edição ainda não implementada no banco");
+  }
+
+  setModal(null);
+};
 
   const excluir = (id: number) => {
     if (confirm("Deseja excluir este usuário?"))
