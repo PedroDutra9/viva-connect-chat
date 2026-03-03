@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -15,18 +16,32 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-    // Mock login — aceita qualquer credencial
-    setTimeout(() => {
-      localStorage.setItem("vc_logged_in", "true");
-      toast({ title: "Login realizado com sucesso!" });
-      navigate("/");
-      setLoading(false);
-    }, 800);
-  };
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    toast({
+      title: "Erro ao fazer login",
+      description: error.message,
+      variant: "destructive",
+    });
+    setLoading(false);
+    return;
+  }
+
+  if (data.session) {
+    toast({ title: "Login realizado com sucesso!" });
+    navigate("/");
+  }
+
+  setLoading(false);
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(217,91%,12%)] via-[hsl(217,80%,18%)] to-[hsl(215,30%,8%)] p-4">
