@@ -10,7 +10,7 @@ type StatusUsuario = "Ativo" | "Inativo";
 
 interface Usuario {
   id: string;
-  auth_id: string; 
+  //auth_id: string; 
   nome: string;
   email: string;
   senha?: string;
@@ -291,31 +291,23 @@ const EquipePage = () => {
   setModal(null);
 };
 
-const excluir = async (authId: string) => {
+const excluir = async (id: string) => {
+  if (!id || id === "null") {
+    alert("ID inválido!");
+    return;
+  }
   const ok = confirm("Deseja realmente excluir este usuário?");
   if (!ok) return;
 
-  console.log("Excluindo auth_id:", authId);
-
-  const { data, error } = await supabase
-    .from("usuarios")
-    .delete()
-    .eq("auth_id", authId)
-    .select(); // força retorno
+  const { error } = await supabase.rpc("deletar_usuario", { user_id: id });
 
   if (error) {
-    console.error(error);
     alert("Erro ao excluir: " + error.message);
     return;
   }
 
-  if (!data || data.length === 0) {
-    alert("Nenhum registro foi apagado. auth_id não encontrado.");
-    return;
-  }
-
   await buscarUsuarios();
-  alert("Usuário excluído do banco!");
+  alert("Usuário excluído!");
 };
 
   const toggleStatus = (id: string) => {
@@ -454,7 +446,7 @@ const excluir = async (authId: string) => {
                       <Pencil size={15} />
                     </button>
                     <button
-                      onClick={() => excluir(u.auth_id)}
+                      onClick={() => excluir(u.id)}
                       className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-colors"
                       title="Excluir"
                     >
