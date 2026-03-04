@@ -76,39 +76,48 @@ export default function FilasPage() {
 
   useEffect(() => { carregarDados(); }, []);
 
-  // 2. Salvar Fila e Vincular ao Setor
-  const salvarFila = async (dados: { nome: string; descricao: string; setor_id?: string }) => {
-    try {
-      if (modalFila === "novo") {
-        // Cria a fila
-        const { data: novaFila, error: filaError } = await supabase
-          .from("filas")
-          .insert([{ nome: dados.nome, descricao: dados.descricao, ativa: true }])
-          .select()
-          .single();
+// 2. Salvar Fila (Insert/Update aprimorado)
+const salvarFila = async (dados: { nome: string; descricao: string; setor_id?: string; ativa: boolean }) => {
+  try {
+    if (modalFila === "novo") {
+      // Lógica de criação (já implementada anteriormente)
+      const { data: novaFila, error: filaError } = await supabase
+        .from("filas")
+        .insert([{ nome: dados.nome, descricao: dados.descricao, ativa: true }])
+        .select().single();
 
-        if (filaError) throw filaError;
+      if (filaError) throw filaError;
 
-        // Se selecionou um setor, cria o vínculo na tabela associativa setores_filas
-        if (dados.setor_id) {
-          await supabase.from("setores_filas").insert([
-            { setor_id: dados.setor_id, fila_id: novaFila.id }
-          ]);
-        }
-      } else if (modalFila) {
-        // Update simples da fila
-        await supabase.from("filas").update({ 
-          nome: dados.nome, 
-          descricao: dados.descricao 
-        }).eq("id", modalFila.id);
+      if (dados.setor_id) {
+        await supabase.from("setores_filas").insert([{ setor_id: dados.setor_id, fila_id: novaFila.id }]);
       }
-      
-      setModalFila(null);
-      carregarDados();
-    } catch (err: any) {
-      alert("Erro ao salvar: " + err.message);
+    } else if (modalFila) {
+      // --- Lógica de EDIÇÃO ---
+      // 1. Atualiza dados básicos e status (Ativa/Inativa)
+      const { error: updateError } = await supabase
+        .from("filas")
+        .update({ 
+          nome: dados.nome, 
+          descricao: dados.descricao, 
+          ativa: dados.ativa // Novo campo de status
+        })
+        .eq("id", (modalFila as Fila).id);
+
+      if (updateError) throw updateError;
+
+      // 2. Atualiza o Setor (Remove o antigo e insere o novo)
+      if (dados.setor_id) {
+        await supabase.from("setores_filas").delete().eq("fila_id", (modalFila as Fila).id);
+        await supabase.from("setores_filas").insert([{ setor_id: dados.setor_id, fila_id: (modalFila as Fila).id }]);
+      }
     }
-  };
+    
+    setModalFila(null);
+    carregarDados();
+  } catch (err: any) {
+    alert("Erro ao salvar: " + err.message);
+  }
+};
 
   // 3. Salvar Relacionamento de Agentes
   const salvarAgentesFila = async (agentesSelecionados: Agente[]) => {
@@ -197,11 +206,11 @@ export default function FilasPage() {
   );
 }
 
-// ---- Modal: Formulário Fila (Editado para incluir Setores) ----
 const ModalFilaForm = ({ fila, setores, onClose, onSave }: any) => {
   const [nome, setNome] = useState(fila?.nome || "");
   const [descricao, setDescricao] = useState(fila?.descricao || "");
-  const [setorId, setSetorId] = useState("");
+  const [setorId, setSetorId] = useState(fila?.setor_id || ""); // Estado para o setor
+  const [ativa, setAtiva] = useState(fila ? fila.ativa : true); // Estado para inativar
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -212,52 +221,47 @@ const ModalFilaForm = ({ fila, setores, onClose, onSave }: any) => {
         </div>
 
         <div className="space-y-4">
+          {/* Campo de Nome */}
           <div>
             <label className="text-xs font-bold text-slate-400 ml-2 uppercase">Nome</label>
-            <input 
-              className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-[#00a884] transition-all" 
-              placeholder="Nome da fila" 
-              value={nome} 
-              onChange={e => setNome(e.target.value)} 
-            />
+            <input className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-[#00a884]" value={nome} onChange={e => setNome(e.target.value)} />
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-400 ml-2 uppercase">Descrição</label>
-            <input 
-              className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-[#00a884] transition-all" 
-              placeholder="Descrição opcional" 
-              value={descricao} 
-              onChange={e => setDescricao(e.target.value)} 
-            />
+          {/* Campo de Setor (Aparece tanto na criação quanto na edição) */}
+          <div className="relative">
+            <label className="text-xs font-bold text-slate-400 ml-2 uppercase">Setor Responsável</label>
+            <select 
+              className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-[#00a884] appearance-none cursor-pointer"
+              value={setorId}
+              onChange={e => setSetorId(e.target.value)}
+            >
+              <option value="">Selecione um setor...</option>
+              {setores.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-4 bottom-4 text-slate-400 pointer-events-none" size={20} />
           </div>
 
-          {!fila && (
-            <div className="relative">
-              <label className="text-xs font-bold text-slate-400 ml-2 uppercase">Setor</label>
-              <select 
-                className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-[#00a884] appearance-none cursor-pointer transition-all"
-                value={setorId}
-                onChange={e => setSetorId(e.target.value)}
-              >
-                <option value="">Selecione um setor...</option>
-                {setores.map((s: any) => (
-                  <option key={s.id} value={s.id}>{s.nome}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-4 bottom-4 text-slate-400 pointer-events-none" size={20} />
-            </div>
-          )}
+          {/* Toggle para Inativar Fila (Apenas na edição) */}
+          <div className="flex items-center gap-3 p-2">
+            <button 
+              onClick={() => setAtiva(!ativa)}
+              className={`w-12 h-6 rounded-full transition-all relative ${ativa ? 'bg-[#00a884]' : 'bg-slate-300'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${ativa ? 'right-1' : 'left-1'}`} />
+            </button>
+            <span className="text-sm font-bold text-slate-600">Fila {ativa ? 'Ativa' : 'Inativa'}</span>
+          </div>
         </div>
 
         <div className="flex gap-3 pt-4">
-          <button onClick={onClose} className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>
+          <button onClick={onClose} className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-50 rounded-2xl">Cancelar</button>
           <button 
-            onClick={() => onSave({ nome, descricao, setor_id: setorId })} 
-            disabled={!nome || (!fila && !setorId)}
-            className="flex-1 py-4 bg-[#00a884] text-white rounded-2xl font-bold shadow-lg shadow-emerald-100 disabled:opacity-50 transition-all active:scale-95"
+            onClick={() => onSave({ nome, descricao, setor_id: setorId, ativa })} 
+            className="flex-1 py-4 bg-[#00a884] text-white rounded-2xl font-bold shadow-lg shadow-emerald-100 transition-all active:scale-95"
           >
-            {fila ? "Salvar" : "Criar"}
+            Salvar Alterações
           </button>
         </div>
       </div>
