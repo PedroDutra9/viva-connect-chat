@@ -1,435 +1,317 @@
-import { useState } from "react";
-import { Plus, Pencil, Trash2, Users, X, UserPlus, Check, Layers } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2, Users, X, Check, Layers, Search, ChevronDown } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { supabase } from "@/lib/supabase";
 
-// ---- Types ----
+// ---- Interfaces ----
+interface Setor {
+  id: string;
+  nome: string;
+}
+
 interface Agente {
-  id: number;
+  id: string;
   nome: string;
   email: string;
-  avatar?: string;
 }
 
 interface Fila {
-  id: number;
+  id: string;
   nome: string;
   descricao?: string;
   ativa: boolean;
   agentes: Agente[];
 }
 
-// ---- Mock de agentes disponíveis na empresa ----
-const agentesDisponiveis: Agente[] = [
-  { id: 1, nome: "Ana Paula", email: "ana@empresa.com" },
-  { id: 2, nome: "Carlos Silva", email: "carlos@empresa.com" },
-  { id: 3, nome: "Fernanda Lima", email: "fernanda@empresa.com" },
-  { id: 4, nome: "João Martins", email: "joao@empresa.com" },
-  { id: 5, nome: "Mariana Costa", email: "mariana@empresa.com" },
-  { id: 6, nome: "Roberto Alves", email: "roberto@empresa.com" },
-];
-
-// ---- Helper: initials avatar ----
+// ---- Helper: Iniciais ----
 const Iniciais = ({ nome, size = 32 }: { nome: string; size?: number }) => {
-  const parts = nome.trim().split(" ");
-  const ini = (parts[0]?.[0] || "") + (parts[1]?.[0] || "");
-  const colors = ["#22c55e", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4", "#f97316"];
+  const ini = nome.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const colors = ["#22c55e", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6"];
   const color = colors[nome.charCodeAt(0) % colors.length];
   return (
     <div style={{
       width: size, height: size, borderRadius: "50%", background: color + "22",
       border: `2px solid ${color}44`, display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: size * 0.35, fontWeight: 700, color, flexShrink: 0
-    }}>
-      {ini.toUpperCase()}
-    </div>
+    }}>{ini}</div>
   );
 };
 
-// ---- Modal: Agentes da fila ----
-const ModalAgentes = ({
-  fila, onClose, onSave
-}: {
-  fila: Fila;
-  onClose: () => void;
-  onSave: (agentes: Agente[]) => void;
-}) => {
-  const [selecionados, setSelecionados] = useState<Agente[]>(fila.agentes);
-  const [busca, setBusca] = useState("");
-
-  const toggle = (agente: Agente) => {
-    setSelecionados(prev =>
-      prev.find(a => a.id === agente.id)
-        ? prev.filter(a => a.id !== agente.id)
-        : [...prev, agente]
-    );
-  };
-
-  const filtrados = agentesDisponiveis.filter(a =>
-    a.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    a.email.toLowerCase().includes(busca.toLowerCase())
-  );
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-background rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-border">
-          <div>
-            <h2 className="text-lg font-bold">Agentes da Fila</h2>
-            <p className="text-sm text-muted-foreground">{fila.nome}</p>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted">
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Agentes selecionados */}
-        {selecionados.length > 0 && (
-          <div className="px-5 pt-4">
-            <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
-              Selecionados ({selecionados.length})
-            </p>
-            <div className="flex flex-wrap gap-2 mb-1">
-              {selecionados.map(a => (
-                <div key={a.id} className="flex items-center gap-1.5 bg-primary/10 text-primary rounded-full px-3 py-1 text-xs font-medium">
-                  <Iniciais nome={a.nome} size={18} />
-                  {a.nome.split(" ")[0]}
-                  <button onClick={() => toggle(a)} className="ml-1 hover:opacity-70">
-                    <X size={11} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Busca */}
-        <div className="px-5 pt-3 pb-2">
-          <input
-            className="w-full input text-sm"
-            placeholder="Buscar agente..."
-            value={busca}
-            onChange={e => setBusca(e.target.value)}
-          />
-        </div>
-
-        {/* Lista */}
-        <div className="px-5 pb-3 max-h-64 overflow-y-auto space-y-1">
-          {filtrados.map(agente => {
-            const sel = !!selecionados.find(a => a.id === agente.id);
-            return (
-              <button
-                key={agente.id}
-                onClick={() => toggle(agente)}
-                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted transition-colors text-left"
-                style={{ border: sel ? "1.5px solid var(--primary)" : "1.5px solid transparent" }}
-              >
-                <Iniciais nome={agente.nome} size={36} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{agente.nome}</p>
-                  <p className="text-xs text-muted-foreground truncate">{agente.email}</p>
-                </div>
-                {sel && (
-                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                    <Check size={11} color="white" />
-                  </div>
-                )}
-              </button>
-            );
-          })}
-          {filtrados.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-6">Nenhum agente encontrado</p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-5 border-t border-border">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-muted text-sm">Cancelar</button>
-          <button
-            onClick={() => { onSave(selecionados); onClose(); }}
-            className="px-5 py-2 rounded-lg bg-primary text-white text-sm font-semibold flex items-center gap-2"
-          >
-            <Check size={15} /> Salvar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ---- Modal: Criar / Editar Fila ----
-const ModalFila = ({
-  fila, onClose, onSave
-}: {
-  fila: Fila | null;
-  onClose: () => void;
-  onSave: (dados: { nome: string; descricao: string }) => void;
-}) => {
-  const [nome, setNome] = useState(fila?.nome || "");
-  const [descricao, setDescricao] = useState(fila?.descricao || "");
-
-  const salvar = () => {
-    if (!nome.trim()) return alert("Nome da fila é obrigatório");
-    onSave({ nome, descricao });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-background rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">{fila ? "Editar Fila" : "Nova Fila"}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted"><X size={18} /></button>
-        </div>
-
-        <div>
-          <label className="text-sm font-semibold block mb-1">Nome da fila *</label>
-          <input
-            className="w-full input"
-            placeholder="ex: Suporte Técnico, Comercial..."
-            value={nome}
-            onChange={e => setNome(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-semibold block mb-1">Descrição <span className="text-muted-foreground font-normal">(opcional)</span></label>
-          <textarea
-            className="w-full input resize-none"
-            rows={3}
-            placeholder="Descreva o propósito desta fila..."
-            value={descricao}
-            onChange={e => setDescricao(e.target.value)}
-          />
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-muted text-sm">Cancelar</button>
-          <button onClick={salvar} className="px-5 py-2 rounded-lg bg-primary text-white text-sm font-semibold">
-            {fila ? "Salvar alterações" : "Criar fila"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ---- Card da Fila ----
-const FilaCard = ({
-  fila,
-  onEditar,
-  onExcluir,
-  onAbrirAgentes,
-  onToggleAtiva,
-}: {
-  fila: Fila;
-  onEditar: () => void;
-  onExcluir: () => void;
-  onAbrirAgentes: () => void;
-  onToggleAtiva: () => void;
-}) => {
-  return (
-    <div className="bg-background rounded-2xl p-5 shadow-sm border border-border space-y-4 hover:shadow-md transition-shadow">
-      {/* Top */}
-      <div className="flex items-start gap-3">
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "#dcfce7" }}>
-          <Layers size={20} color="#22c55e" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-bold text-base truncate">{fila.nome}</h3>
-            <button
-              onClick={onToggleAtiva}
-              className={`text-xs px-2.5 py-0.5 rounded-full font-semibold transition-colors ${
-                fila.ativa
-                  ? "bg-green-100 text-green-700 hover:bg-green-200"
-                  : "bg-red-100 text-red-600 hover:bg-red-200"
-              }`}
-            >
-              {fila.ativa ? "Ativa" : "Inativa"}
-            </button>
-          </div>
-          <p className="text-sm text-muted-foreground truncate">{fila.descricao || fila.nome}</p>
-        </div>
-      </div>
-
-      {/* Agentes preview */}
-      {fila.agentes.length > 0 && (
-        <div className="flex items-center gap-2">
-          <div className="flex -space-x-2">
-            {fila.agentes.slice(0, 4).map(a => (
-              <div key={a.id} title={a.nome}>
-                <Iniciais nome={a.nome} size={28} />
-              </div>
-            ))}
-            {fila.agentes.length > 4 && (
-              <div style={{
-                width: 28, height: 28, borderRadius: "50%",
-                background: "#f1f5f9", border: "2px solid white",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 10, fontWeight: 700, color: "#6b7280"
-              }}>
-                +{fila.agentes.length - 4}
-              </div>
-            )}
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {fila.agentes.length} agente{fila.agentes.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-2 pt-1">
-        <button
-          onClick={onAbrirAgentes}
-          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium transition-colors"
-        >
-          <Users size={15} />
-          Agentes
-        </button>
-        <button
-          onClick={onEditar}
-          className="p-2 rounded-xl bg-muted hover:bg-muted/80 transition-colors"
-          title="Editar fila"
-        >
-          <Pencil size={16} />
-        </button>
-        <button
-          onClick={onExcluir}
-          className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 transition-colors"
-          title="Excluir fila"
-        >
-          <Trash2 size={16} />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ---- Page ----
-const FilasPage = () => {
-  const [filas, setFilas] = useState<Fila[]>([
-    { id: 1, nome: "Comercial", descricao: "Comercial", ativa: true, agentes: [] },
-    { id: 2, nome: "Suporte Técnico", descricao: "Suporte Técnico", ativa: true, agentes: [] },
-    { id: 3, nome: "Financeiro", descricao: "Financeiro", ativa: true, agentes: [] },
-    { id: 4, nome: "Comercial DIB", descricao: "Comercial DIB", ativa: true, agentes: [] },
-  ]);
-
+// ---- Componente Principal ----
+export default function FilasPage() {
+  const [filas, setFilas] = useState<Fila[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]); // Estado para setores
+  const [loading, setLoading] = useState(true);
   const [modalFila, setModalFila] = useState<"novo" | Fila | null>(null);
   const [modalAgentes, setModalAgentes] = useState<Fila | null>(null);
 
-  const criarOuEditar = (dados: { nome: string; descricao: string }) => {
-    if (modalFila === "novo") {
-      setFilas(prev => [...prev, {
-        id: Date.now(),
-        nome: dados.nome,
-        descricao: dados.descricao,
-        ativa: true,
-        agentes: [],
-      }]);
-    } else if (modalFila) {
-      setFilas(prev => prev.map(f =>
-        f.id === (modalFila as Fila).id
-          ? { ...f, nome: dados.nome, descricao: dados.descricao }
-          : f
-      ));
+  // 1. Carregar Filas, Agentes e Setores
+  const carregarDados = async () => {
+    setLoading(true);
+    
+    // Busca Setores para o Modal
+    const { data: setoresData } = await supabase.from("setores").select("id, nome").eq("ativo", true);
+    if (setoresData) setSetores(setoresData);
+
+    const { data, error } = await supabase
+      .from("filas")
+      .select(`
+        *,
+        usuarios_filas (
+          usuario_id,
+          usuarios (*)
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      const formatadas = data.map((f: any) => ({
+        ...f,
+        agentes: f.usuarios_filas?.map((rel: any) => rel.usuarios).filter(Boolean) || []
+      }));
+      setFilas(formatadas);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { carregarDados(); }, []);
+
+  // 2. Salvar Fila e Vincular ao Setor
+  const salvarFila = async (dados: { nome: string; descricao: string; setor_id?: string }) => {
+    try {
+      if (modalFila === "novo") {
+        // Cria a fila
+        const { data: novaFila, error: filaError } = await supabase
+          .from("filas")
+          .insert([{ nome: dados.nome, descricao: dados.descricao, ativa: true }])
+          .select()
+          .single();
+
+        if (filaError) throw filaError;
+
+        // Se selecionou um setor, cria o vínculo na tabela associativa setores_filas
+        if (dados.setor_id) {
+          await supabase.from("setores_filas").insert([
+            { setor_id: dados.setor_id, fila_id: novaFila.id }
+          ]);
+        }
+      } else if (modalFila) {
+        // Update simples da fila
+        await supabase.from("filas").update({ 
+          nome: dados.nome, 
+          descricao: dados.descricao 
+        }).eq("id", modalFila.id);
+      }
+      
+      setModalFila(null);
+      carregarDados();
+    } catch (err: any) {
+      alert("Erro ao salvar: " + err.message);
     }
   };
 
-  const excluirFila = (id: number) => {
-    if (confirm("Deseja excluir esta fila?")) {
-      setFilas(prev => prev.filter(f => f.id !== id));
+  // 3. Salvar Relacionamento de Agentes
+  const salvarAgentesFila = async (agentesSelecionados: Agente[]) => {
+    if (!modalAgentes) return;
+    await supabase.from("usuarios_filas").delete().eq("fila_id", modalAgentes.id);
+    if (agentesSelecionados.length > 0) {
+      const inserts = agentesSelecionados.map(a => ({
+        fila_id: modalAgentes.id,
+        usuario_id: a.id
+      }));
+      await supabase.from("usuarios_filas").insert(inserts);
+    }
+    setModalAgentes(null);
+    carregarDados();
+  };
+
+  const excluirFila = async (id: string) => {
+    if (confirm("Excluir esta fila?")) {
+      await supabase.from("filas").delete().eq("id", id);
+      carregarDados();
     }
   };
-
-  const salvarAgentes = (filaId: number, agentes: Agente[]) => {
-    setFilas(prev => prev.map(f => f.id === filaId ? { ...f, agentes } : f));
-  };
-
-  const toggleAtiva = (id: number) => {
-    setFilas(prev => prev.map(f => f.id === id ? { ...f, ativa: !f.ativa } : f));
-  };
-
-  const filaParaModal = modalFila !== "novo" ? modalFila as Fila | null : null;
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Filas de Atendimento</h1>
-            <p className="text-muted-foreground text-sm">
-              Gerencie as filas de atendimento e seus agentes
-            </p>
+            <h1 className="text-2xl font-bold text-slate-800">Filas de Atendimento</h1>
+            <p className="text-slate-500">Gerencie equipes e fluxos de entrada</p>
           </div>
-          <button
-            onClick={() => setModalFila("novo")}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity"
-          >
-            <Plus size={18} />
-            Nova Fila
+          <button onClick={() => setModalFila("novo")} className="flex gap-2 items-center bg-[#00a884] text-white px-4 py-2 rounded-xl font-bold transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-emerald-100">
+            <Plus size={20} /> Nova Fila
           </button>
         </div>
 
-        {/* Stats rápidos */}
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: "Total de Filas", value: filas.length, color: "#3b82f6" },
-            { label: "Filas Ativas", value: filas.filter(f => f.ativa).length, color: "#22c55e" },
-            { label: "Agentes Atribuídos", value: new Set(filas.flatMap(f => f.agentes.map(a => a.id))).size, color: "#f59e0b" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-background rounded-xl p-4 border border-border">
-              <p className="text-2xl font-bold" style={{ color }}>{value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filas.map(fila => (
+            <div key={fila.id} className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start">
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                    <Layers size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">{fila.nome}</h3>
+                    <p className="text-xs text-slate-400">{fila.agentes.length} agente(s)</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${fila.ativa ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                  {fila.ativa ? "ATIVA" : "INATIVA"}
+                </span>
+              </div>
+
+              <div className="flex -space-x-2">
+                {fila.agentes.slice(0, 5).map(a => <Iniciais key={a.id} nome={a.nome} size={28} />)}
+                {fila.agentes.length > 5 && (
+                  <div className="w-7 h-7 bg-slate-100 border-2 border-white rounded-full flex items-center justify-center text-[10px] font-bold">+ {fila.agentes.length - 5}</div>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button onClick={() => setModalAgentes(fila)} className="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-sm font-semibold text-slate-600 transition-all">
+                  <Users size={16} /> Agentes
+                </button>
+                <button onClick={() => setModalFila(fila)} className="p-2 text-slate-400 hover:text-slate-600"><Pencil size={18}/></button>
+                <button onClick={() => excluirFila(fila.id)} className="p-2 text-red-300 hover:text-red-500"><Trash2 size={18}/></button>
+              </div>
             </div>
           ))}
         </div>
-
-        {/* Grid de filas */}
-        {filas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <Layers size={48} className="mb-4 opacity-20" />
-            <p className="text-lg font-medium">Nenhuma fila criada</p>
-            <p className="text-sm">Clique em "Nova Fila" para começar</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {filas.map(fila => (
-              <FilaCard
-                key={fila.id}
-                fila={fila}
-                onEditar={() => setModalFila(fila)}
-                onExcluir={() => excluirFila(fila.id)}
-                onAbrirAgentes={() => setModalAgentes(fila)}
-                onToggleAtiva={() => toggleAtiva(fila.id)}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Modal criar/editar fila */}
-      {modalFila !== null && (
-        <ModalFila
-          fila={filaParaModal}
-          onClose={() => setModalFila(null)}
-          onSave={criarOuEditar}
+      {/* Modal Fila com Select de Setores */}
+      {modalFila && (
+        <ModalFilaForm 
+          fila={modalFila === "novo" ? null : modalFila} 
+          setores={setores}
+          onClose={() => setModalFila(null)} 
+          onSave={salvarFila} 
         />
       )}
 
-      {/* Modal agentes */}
-      {modalAgentes && (
-        <ModalAgentes
-          fila={modalAgentes}
-          onClose={() => setModalAgentes(null)}
-          onSave={(agentes) => salvarAgentes(modalAgentes.id, agentes)}
-        />
-      )}
+      {modalAgentes && <ModalGerenciarAgentes fila={modalAgentes} onClose={() => setModalAgentes(null)} onSave={salvarAgentesFila} />}
     </DashboardLayout>
+  );
+}
+
+// ---- Modal: Formulário Fila (Editado para incluir Setores) ----
+const ModalFilaForm = ({ fila, setores, onClose, onSave }: any) => {
+  const [nome, setNome] = useState(fila?.nome || "");
+  const [descricao, setDescricao] = useState(fila?.descricao || "");
+  const [setorId, setSetorId] = useState("");
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl space-y-5">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-slate-800">{fila ? "Editar Fila" : "Nova Fila"}</h2>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-full transition-colors"><X size={20}/></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-slate-400 ml-2 uppercase">Nome</label>
+            <input 
+              className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-[#00a884] transition-all" 
+              placeholder="Nome da fila" 
+              value={nome} 
+              onChange={e => setNome(e.target.value)} 
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-400 ml-2 uppercase">Descrição</label>
+            <input 
+              className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-[#00a884] transition-all" 
+              placeholder="Descrição opcional" 
+              value={descricao} 
+              onChange={e => setDescricao(e.target.value)} 
+            />
+          </div>
+
+          {!fila && (
+            <div className="relative">
+              <label className="text-xs font-bold text-slate-400 ml-2 uppercase">Setor</label>
+              <select 
+                className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-[#00a884] appearance-none cursor-pointer transition-all"
+                value={setorId}
+                onChange={e => setSetorId(e.target.value)}
+              >
+                <option value="">Selecione um setor...</option>
+                {setores.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 bottom-4 text-slate-400 pointer-events-none" size={20} />
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          <button onClick={onClose} className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>
+          <button 
+            onClick={() => onSave({ nome, descricao, setor_id: setorId })} 
+            disabled={!nome || (!fila && !setorId)}
+            className="flex-1 py-4 bg-[#00a884] text-white rounded-2xl font-bold shadow-lg shadow-emerald-100 disabled:opacity-50 transition-all active:scale-95"
+          >
+            {fila ? "Salvar" : "Criar"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default FilasPage;
+// ... Restante do código (ModalGerenciarAgentes) se mantém igual
+const ModalGerenciarAgentes = ({ fila, onClose, onSave }: any) => {
+  const [usuarios, setUsuarios] = useState<Agente[]>([]);
+  const [selecionados, setSelecionados] = useState<Agente[]>(fila.agentes || []);
+  const [busca, setBusca] = useState("");
+
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      const { data } = await supabase.from("usuarios").select("*").ilike('nome', `%${busca}%`);
+      if (data) setUsuarios(data);
+    };
+    fetchUsuarios();
+  }, [busca]);
+
+  const toggleAgente = (u: Agente) => {
+    setSelecionados(prev => prev.find(x => x.id === u.id) ? prev.filter(x => x.id !== u.id) : [...prev, u]);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden">
+        <div className="p-6 border-b flex justify-between items-center">
+          <h2 className="text-xl font-bold">Agentes na Fila</h2>
+          <button onClick={onClose}><X /></button>
+        </div>
+        <div className="p-4 border-b bg-slate-50">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+            <input className="w-full pl-10 pr-4 py-2 rounded-xl border-none focus:ring-2 focus:ring-[#00a884]" placeholder="Buscar agentes..." value={busca} onChange={e => setBusca(e.target.value)} />
+          </div>
+        </div>
+        <div className="max-h-80 overflow-y-auto p-4 space-y-2">
+          {usuarios.map(u => (
+            <button key={u.id} onClick={() => toggleAgente(u)} className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all ${selecionados.find(x => x.id === u.id) ? 'border-[#00a884] bg-emerald-50' : 'border-slate-100'}`}>
+              <div className="flex items-center gap-3">
+                <Iniciais nome={u.nome} size={36} />
+                <div className="text-left"><p className="font-bold text-sm text-slate-800">{u.nome}</p><p className="text-xs text-slate-400">{u.email}</p></div>
+              </div>
+              {selecionados.find(x => x.id === u.id) && <Check className="text-[#00a884]" size={20} />}
+            </button>
+          ))}
+        </div>
+        <div className="p-6 border-t flex gap-3">
+          <button onClick={onClose} className="flex-1 py-3 font-bold text-slate-500">Cancelar</button>
+          <button onClick={() => onSave(selecionados)} className="flex-1 py-3 bg-[#00a884] text-white rounded-2xl font-bold">Salvar Agentes</button>
+        </div>
+      </div>
+    </div>
+  );
+};
